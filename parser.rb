@@ -28,9 +28,9 @@ module Parser
       lhs = case token
             when 'for' then parse_for_in
             when '('  then expr = parse(-1); self.advance; expr
-            when '@[' then parse_seq
             when '['  then parse_lambda
             when '{'  then parse_block
+            when '@[' then parse_seq
             when -> (tok) { tok[0] == "'" } then Expression::String.new(token[1..-2])
             when -> (t) { is_number? t }    then Expression::Number.new(numberify token)
             when LETTERS, UPPER             then Expression::Symbol.new(token)
@@ -63,17 +63,18 @@ module Parser
 
 
     def parse_seq
-      items = []
-      if peek != ']'
-        loop do
-          items << parse(0)
-          break unless peek == ','
-          self.advance
-        end
+      elements = []
+      while (nxt = peek) && nxt != ']'
+        elements << parse(-1)
+        advance if peek == ','
       end
-      self.advance
-      Expression::Sequence.new(items)
+      unless advance == ']'
+        raise "Syntax Error: Expected ']' to close sequence"
+      end
+      Expression::Sequence.new(elements)
     end
+
+
     def parse_for_in
       var_token = advance
       iterator_var = Expression::Symbol.new(var_token)
@@ -145,6 +146,7 @@ module Parser
       return nil if @pos >= @buf.length
       start = @pos
       char  = @buf[@pos]
+
       case char
       when STRING_START
         @pos += 1
@@ -153,18 +155,29 @@ module Parser
         return @buf[start...@pos]
       when DIGITS
         @pos += 1 while @pos < @buf.length && (DIGITS === @buf[@pos] || @buf[@pos] == '.')
-      when LETTERS, UPPER, '_'
-        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_')
+      when LETTERS, UPPER, '_', '?'
+        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?')
       when '(', ')', ',', '[', ']', '{', '}'
         @pos += 1
-      else # this is for operators, variable length
+      when '@'
+        if @buf[@pos + 1] == '['
+          @pos += 2
+          return "@["
+        else
+          @pos += 1 while @pos < @buf.length &&
+                          !(WHITESPACE.include? @buf[@pos]) &&
+                          !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
+                          !%w|( ) , $ [ ] { }|.include?(@buf[@pos])
+        end
+      else
         @pos += 1 while @pos < @buf.length &&
                         !(WHITESPACE.include? @buf[@pos]) &&
                         !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
-                        !%w[( ) , $].include?(@buf[@pos])
+                        !%w|( ) , $ [ ] { }|.include?(@buf[@pos])
       end
       @buf[start...@pos]
     end
+
 
     private
     def skip_whitespace

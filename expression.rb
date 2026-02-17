@@ -144,8 +144,11 @@ module Expression
       target = @target.eval(env)
       if target.instance_of? Environment::Environment
         target.interned[@field.name]
+      else
+        if target.respond_to?(@field.name)
+            target.method(@field.name)
+        end
       end
-      ### INCOMPLETE, rn just computed environments
     end
   end
 
@@ -177,7 +180,7 @@ module Expression
     end
 
     def eval(env)
-      self
+      Sequence.new(self.items.map { |expr| if expr.is_a? Expression then expr.eval(env) else expr end })
     end
 
     def to_s
