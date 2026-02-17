@@ -114,8 +114,6 @@ module Expression
     end
   end
 
-
-
   class Call < Expression
     def initialize(name, args)
       @func = name
@@ -137,6 +135,19 @@ module Expression
     end
   end
 
+  class DotAccess < Expression
+    def initialize(target, field)
+        @target = target
+        @field = field
+    end
+    def eval(env)
+      target = @target.eval(env)
+      if target.instance_of? Environment::Environment
+        target.interned[@field.name]
+      end
+      ### INCOMPLETE, rn just computed environments
+    end
+  end
   class Sequence < Expression
     def initialize(items = nil)
       @items = items || []
@@ -153,14 +164,16 @@ module Expression
 
   class Block < Expression
     def initialize(body)
-      @body = body
+      @body  = body
+      @scope = nil
     end
     def eval(env)
+      @scope = Environment::Environment.new(parent: env)
       result = nil
       @body.each do |form|
-        result = form.eval(env)
+        result = form.eval(@scope)
       end
-      result
+      @scope
     end
   end
 end

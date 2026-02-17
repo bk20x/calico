@@ -26,12 +26,9 @@ module Parser
       return nil if token.nil?
 
       lhs = case token
-            when '('
-              expr = parse(-1)
-              self.advance
-              expr
-            when '['                        then parse_lambda
-            when -> (tok){tok.length >= 2 && tok[0..1] == '@['} then parse_seq # this is kinda ehhhh, weird, but it's okay :)
+            when '(' then expr = parse(-1); self.advance; expr
+            when '[' then parse_lambda
+            when '{' then parse_block
             when -> (tok) { tok[0] == "'" } then Expression::String.new(token[1..-2])
             when -> (t) { is_number? t }    then Expression::Number.new(numberify token)
             when LETTERS, UPPER             then Expression::Symbol.new(token)
@@ -39,6 +36,12 @@ module Parser
             end
 
       while (nxt = peek)
+        if nxt == '.'
+          self.advance
+          property = self.advance
+          lhs = Expression::DotAccess.new(lhs, Expression::Symbol.new(property))
+          next
+        end
         if nxt == '('
           self.advance
           lhs = parse_call(lhs)
@@ -55,6 +58,7 @@ module Parser
       end
       lhs
     end
+
 
     def parse_seq
       items = []
@@ -107,6 +111,17 @@ module Parser
       Expression::Call.new(func, args)
     end
 
+    def parse_block
+      body_expressions = []
+      while (nxt = peek) && nxt != '}'
+        expr = parse(-1)
+        body_expressions << expr if expr
+      end
+      unless advance == '}'
+        raise "Syntax Error: Missing closing '}' for block body"
+      end
+      Expression::Block.new(body_expressions)
+    end
 
     def precedence_of(token)
       Expression::OPERATOR_PRECEDENCES[token]
