@@ -162,14 +162,17 @@ module Expression
       coll_or_range = @coll_or_range.eval(env)
       result = nil
       scope = Environment::Environment.new(parent: env)
-      # if coll_or_range is a Seq
-      coll_or_range.items.each do |item|
-          scope.intern(@args[0].name, item)
-          @body.each do |expr|
-            result = expr.eval(scope)
-          end
+      if coll_or_range.instance_of? Array
+        coll_or_range.each do |item|
+            scope.intern(@args[0].name, item)
+            @body.each do |expr|
+              result = expr.eval(scope)
+            end
+        end
+        result
+      else
+        raise "Not implemented: for in for type #{coll_or_range.class}"
       end
-      result
     end
   end
 
@@ -180,7 +183,7 @@ module Expression
     end
 
     def eval(env)
-      Sequence.new(self.items.map { |expr| if expr.is_a? Expression then expr.eval(env) else expr end })
+      self.items.map { |expr| if expr.is_a? Expression then expr.eval(env) else expr end }
     end
 
     def to_s

@@ -10,3 +10,10 @@ bobby <- {
 print(bobby.name + ' is ' + image(bobby.age) + ' years old')
 
 bobby.greet('boben')
+
+
+xs <- @[2,4,6,8]
+
+for x in xs {
+  print(x * x)
+}
