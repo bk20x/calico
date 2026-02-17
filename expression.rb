@@ -1,23 +1,27 @@
 require_relative 'environment'
 module Expression
-  OP_ADD    = '+'
-  OP_SUB    = '-'
-  OP_MUL    = '*'
-  OP_DIV    = '/'
-  OP_GTHAN  = '>'
-  OP_LTHAN  = '<'
-  OP_EQ     = '='
-  OP_BIND   = '<-'
-
+  OP_ADD     = '+'
+  OP_SUB     = '-'
+  OP_MUL     = '*'
+  OP_DIV     = '/'
+  OP_GTHAN   = '>'
+  OP_GTHANEQ = '>='
+  OP_LTHAN   = '<'
+  OP_LTHANEQ = '<='
+  OP_EQ      = '='
+  OP_BIND    = '<-'
+  COMPARATOR_PRECEDENCE = 1
   OPERATOR_PRECEDENCES = {
-    OP_BIND  => 0,
-    OP_EQ    => 1,
-    OP_GTHAN => 1,
-    OP_LTHAN => 1,
-    OP_SUB   => 2,
-    OP_ADD   => 2,
-    OP_DIV   => 3,
-    OP_MUL   => 3
+    OP_BIND    => 0,
+    OP_EQ      => COMPARATOR_PRECEDENCE,
+    OP_GTHAN   => COMPARATOR_PRECEDENCE,
+    OP_GTHANEQ => COMPARATOR_PRECEDENCE,
+    OP_LTHAN   => COMPARATOR_PRECEDENCE,
+    OP_LTHANEQ => COMPARATOR_PRECEDENCE,
+    OP_SUB     => 2,
+    OP_ADD     => 2,
+    OP_DIV     => 3,
+    OP_MUL     => 3
   }
 
   class Expression
@@ -32,6 +36,10 @@ module Expression
 
     def eval(env)
       @value
+    end
+
+    def to_s
+      @value.to_s
     end
   end
 
@@ -56,13 +64,15 @@ module Expression
         left  = @lexpr.eval(env)
         right = @rexpr.eval(env)
         case @op
-          when OP_ADD   then left + right
-          when OP_SUB   then left - right
-          when OP_MUL   then left * right
-          when OP_DIV   then left / right.to_f
-          when OP_GTHAN then left > right
-          when OP_LTHAN then left < right
-          when OP_EQ    then left == right
+          when OP_ADD     then left + right
+          when OP_SUB     then left - right
+          when OP_MUL     then left * right
+          when OP_DIV     then left / right.to_f
+          when OP_GTHAN   then left > right
+          when OP_GTHANEQ then left >= right
+          when OP_LTHAN   then left < right
+          when OP_LTHANEQ then left <= right
+          when OP_EQ      then left == right
           else raise "Invalid operator in binary expression: #{@op}"
         end
       end
@@ -127,6 +137,19 @@ module Expression
     end
   end
 
+  class Sequence < Expression
+    def initialize(items = nil)
+      @items = items || []
+    end
+
+    def eval(env)
+      self
+    end
+
+    def to_s
+      "[#{@items.join(', ')}]"
+    end
+  end
 
   class Block < Expression
     def initialize(body)

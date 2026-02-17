@@ -31,6 +31,7 @@ module Parser
               self.advance
               expr
             when '['                        then parse_lambda
+            when -> (tok){tok.length >= 2 && tok[0..1] == '@['} then parse_seq # this is kinda ehhhh, weird, but it's okay :)
             when -> (tok) { tok[0] == "'" } then Expression::String.new(token[1..-2])
             when -> (t) { is_number? t }    then Expression::Number.new(numberify token)
             when LETTERS, UPPER             then Expression::Symbol.new(token)
@@ -53,6 +54,19 @@ module Parser
         break
       end
       lhs
+    end
+
+    def parse_seq
+      items = []
+      if peek != ']'
+        loop do
+          items << parse(0)
+          break unless peek == ','
+          self.advance
+        end
+      end
+      self.advance
+      Expression::Sequence.new(items)
     end
 
     def parse_lambda
