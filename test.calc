@@ -1,0 +1,11 @@
+
+
+hello <- [name] {
+    print('Hello ' + name + '!')
+}
+
+hello('bobby')
+
+square <- [x] {x * x}
+
+print(square(6502))
