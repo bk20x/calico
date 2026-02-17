@@ -26,9 +26,11 @@ module Parser
       return nil if token.nil?
 
       lhs = case token
-            when '(' then expr = parse(-1); self.advance; expr
-            when '[' then parse_lambda
-            when '{' then parse_block
+            when 'for' then parse_for_in
+            when '('  then expr = parse(-1); self.advance; expr
+            when '@[' then parse_seq
+            when '['  then parse_lambda
+            when '{'  then parse_block
             when -> (tok) { tok[0] == "'" } then Expression::String.new(token[1..-2])
             when -> (t) { is_number? t }    then Expression::Number.new(numberify token)
             when LETTERS, UPPER             then Expression::Symbol.new(token)
@@ -72,6 +74,19 @@ module Parser
       self.advance
       Expression::Sequence.new(items)
     end
+    def parse_for_in
+      var_token = advance
+      iterator_var = Expression::Symbol.new(var_token)
+      unless advance == 'in'
+        raise "Syntax Error: Expected 'in' after for variable"
+      end
+      collection = parse(0) # this will support ranges later when added
+      unless advance == '{'
+        raise "Syntax Error: Expected '{' for loop body"
+      end
+      body_node = parse_block
+      Expression::ForIn.new(collection,[iterator_var], body_node.body)
+    end
 
     def parse_lambda
       params = []
@@ -95,8 +110,6 @@ module Parser
       end
       Expression::Lambda.new(params, body_expressions, nil)
     end
-
-
 
     def parse_call(func)
       args = []
@@ -170,8 +183,6 @@ module Parser
 end
 
 
-
-
 def do_file(path, env)
   unless File.exist?(path)
     puts "Error: File not found: #{path}"
@@ -197,10 +208,12 @@ end
 require_relative 'environment'
 context = {
   'print' => -> (*xs) {puts xs.map {|x| x.to_s}.join},
+  'image' => -> (obj) {obj.to_s},
+  'gets'  => -> ()  {gets}
 }
 env = Environment::Environment.new
 env.interned.merge!(context)
-
+do_file('test.calc', env)
 while true
   print "> "
   ln = gets.chomp

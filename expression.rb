@@ -148,7 +148,30 @@ module Expression
       ### INCOMPLETE, rn just computed environments
     end
   end
+
+  class ForIn < Expression
+    def initialize(coll_or_range, args, body)
+      @coll_or_range = coll_or_range
+      @args          = args
+      @body          = body
+    end
+    def eval(env)
+      coll_or_range = @coll_or_range.eval(env)
+      result = nil
+      scope = Environment::Environment.new(parent: env)
+      # if coll_or_range is a Seq
+      coll_or_range.items.each do |item|
+          scope.intern(@args[0].name, item)
+          @body.each do |expr|
+            result = expr.eval(scope)
+          end
+      end
+      result
+    end
+  end
+
   class Sequence < Expression
+    attr_reader :items
     def initialize(items = nil)
       @items = items || []
     end
@@ -163,17 +186,17 @@ module Expression
   end
 
   class Block < Expression
+    attr_reader :body
     def initialize(body)
       @body  = body
-      @scope = nil
     end
     def eval(env)
-      @scope = Environment::Environment.new(parent: env)
+      scope = Environment::Environment.new(parent: env)
       result = nil
       @body.each do |form|
-        result = form.eval(@scope)
+        result = form.eval(scope)
       end
-      @scope
+      scope
     end
   end
 end

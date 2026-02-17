@@ -1,11 +1,12 @@
-
-
-hello <- [name] {
-    print('Hello ' + name + '!')
+bobby <- {
+    name  <- 'Bobby'
+    age   <- 92
+    greet <- [other] {
+        print('Hello ' + other + '!')
+    }
 }
 
-hello('bobby')
 
-square <- [x] {x * x}
+print(bobby.name + ' is ' + image(bobby.age) + ' years old')
 
-print(square(6502))
+bobby.greet('boben')
