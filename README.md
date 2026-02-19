@@ -44,6 +44,9 @@ List <- [*init] {
         if f(x) {
           result.push(x)
         }
+		else {
+  		  result
+		}
       }
     }
   }
