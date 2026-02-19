@@ -3,6 +3,12 @@
 #### Very WIP, funnily enough I made this after telling myself I was going to make a bc clone in with operator precedence to learn the language 
 
 ```
+Time <- find-class('Time')
+
+now <- use Time in { now().inspect().reverse() * 3 }
+
+print(now)
+
 List <- [*init] {
   {
     items <- init
@@ -29,7 +35,6 @@ List <- [*init] {
   }
 }
 
-
 ys <- List(2, 4, 6, 8)
 
 use ys in {
@@ -40,11 +45,4 @@ use ys in {
 }
 
 print(ys.items.inspect())
-
-Time <- find-class('Time')
-
-now <- use Time in { now().inspect().reverse() * 3 }
-
-print(now)
-
 ```
