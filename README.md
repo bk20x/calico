@@ -8,19 +8,6 @@ Time <- find-class('Time')
 
 now  <- use Time in { now().inspect().reverse() * 3 }
 
-bobby <- {
-    name  <- 'Bobby'
-    age   <- 92
-    greet <- [other] {
-        print('Hello ' + other + '!')
-    }
-}
-
-for x in 0..5 {
-  bobby.greet('Boben Number: ' + image(x))
-}
-
-
 Counter <- [] {
    x <- 0
    {
