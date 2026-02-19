@@ -1,31 +1,50 @@
 # Calico
-### Very early WIP. funnily enough i made this after telling myself i was going to make a simple math language / calculator to learn Ruby! but Ruby is pretty flexible and it's something new so i would like to mess around with this some more. I would say its most unique feature is the idea of first class computed environments
-
-
+### A little scripting language with first class environments and the ability to call ruby methods directly
+#### Very WIP, funnily enough I made this after telling myself I was going to make a bc clone in with operator precedence to learn the language 
 
 ```
-hello <- [name] {
-    print('Hello ' + name + '!')
+List <- [*init] {
+  {
+    items <- init
+    add <- [x]{
+      items.push(x)
+    }
+    at <- [idx] {
+      items.at(idx)
+    }
+    map <- [f] {
+      result <- @[]
+      for x in items {
+	    result.push(f(x))
+      }
+    }
+    filter <- [f] {
+      result <- @[]
+      for x in items {
+        if f(x) {
+          result.push(x)
+        }
+      }
+    }
+  }
 }
 
-hello('bobby')
 
-square <- [x] {x * x}
+ys <- List(2, 4, 6, 8)
 
-print(square(6502))
-
-
-add <- [a] {[b] {a + b}}
-
-add5 <- add(5)
-
-print(add5(50))
-
-
-obj <- {
-  square <- [x] {x * x}
+use ys in {
+  add(5)
+  add(10)
+  add(15)
+  items := map([x]{ x * x })
 }
 
-print(obj.square(25))
+print(ys.items.inspect())
+
+Time <- find-class('Time')
+
+now <- use Time in { now().inspect().reverse() * 3 }
+
+print(now)
 
 ```
