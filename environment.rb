@@ -19,5 +19,15 @@ module Environment
       end
       raise "Unbound symbol: #{symbol}"
     end
+    def location_of(symbol)
+      env = self
+      while env != nil do
+        if env.interned.has_key?(symbol)
+          return env
+        end
+        env = env.parent
+      end
+      raise "Unbound symbol: #{symbol}"
+    end
   end
 end

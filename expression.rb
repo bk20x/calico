@@ -10,9 +10,11 @@ module Expression
   OP_LTHANEQ = '<='
   OP_EQ      = '='
   OP_BIND    = '<-'
+  OP_SET     = ':='
   COMPARATOR_PRECEDENCE = 1
   OPERATOR_PRECEDENCES = {
     OP_BIND    => 0,
+    OP_SET     => 0,
     OP_EQ      => COMPARATOR_PRECEDENCE,
     OP_GTHAN   => COMPARATOR_PRECEDENCE,
     OP_GTHANEQ => COMPARATOR_PRECEDENCE,
@@ -60,6 +62,14 @@ module Expression
         binding_name = @lexpr.name
         val          = @rexpr.eval(env)
         env.intern(binding_name, val)
+      elsif @op == OP_SET
+        unless @lexpr.instance_of? Symbol
+          raise "Left hand side of set, `:=` must be a symbol"
+        end
+        binding_name = @lexpr.name
+        val          = @rexpr.eval(env)
+        place = env.location_of(binding_name)
+        place.intern(binding_name, val)
       else
         left  = @lexpr.eval(env)
         right = @rexpr.eval(env)
@@ -119,12 +129,20 @@ module Expression
       @func = name
       @args = args
     end
+
     def eval(env)
       func = @func.eval(env)
       if func.instance_of? Lambda
         instance_env = Environment::Environment.new(parent: func.closure || env)
+        evaled_args = @args.map { |a| a.eval(env) }
         func.params.each_with_index do |param, i|
-          instance_env.intern(param.name, @args[i].eval(env))
+          if param.instance_of? Vararg
+            rest = evaled_args[i..-1] || []
+            instance_env.intern(param.name, rest)
+            break
+          else
+            instance_env.intern(param.name, evaled_args[i])
+          end
         end
         result = nil
         func.body.each { |expr| result = expr.eval(instance_env) }
@@ -135,23 +153,78 @@ module Expression
     end
   end
 
+
+  class Vararg < Expression
+    attr_accessor :name
+    def initialize(name)
+      @name = name
+    end
+    def eval(env)
+      raise 'This should be unreachable, Expression::Vararg.eval. Varargs are never directly evaluated'
+    end
+  end
   class DotAccess < Expression
     def initialize(target, field)
         @target = target
-        @field = field
+        @field  = field.name
     end
     def eval(env)
       target = @target.eval(env)
-      if target.instance_of? Environment::Environment
-        target.interned[@field.name]
+      if target.instance_of? Environment::Environment and target.interned.has_key? @field
+        target.interned[@field]
       else
-        if target.respond_to?(@field.name)
-            target.method(@field.name)
+        if target.respond_to?(@field)
+            target.method(@field)
         end
       end
     end
   end
 
+  class UseExpression < Expression
+    def initialize(some_env)
+      @env = some_env
+    end
+    def eval(env)
+      opened_env = @env.eval(env)
+      env.interned.merge!(opened_env.interned)
+      opened_env.interned
+    end
+  end
+
+  class UseInExpression < UseExpression
+    def initialize(some_env, body)
+      @env  = some_env
+      @body = body
+    end
+    def eval(env)
+      object = @env.eval(env)
+      if object.instance_of? Environment::Environment
+        @body.eval(object)
+      else
+        object_scope = Environment::Environment.new(parent: env)
+        object.methods.each do |method|
+          object_scope.intern(method.to_s, object.method(method))
+        end
+        @body.eval(object_scope)
+      end
+    end
+  end
+  class IfElse < Expression
+    def initialize(cond, body, elt)
+      @cond = cond
+      @body = body
+      @elt  = elt
+    end
+
+    def eval(env)
+      cond = @cond.eval(env)
+      if cond
+        @body.eval(env)
+      elsif @elt
+        @elt.eval(env)
+      end
+    end
+  end
   class ForIn < Expression
     def initialize(coll_or_range, args, body)
       @coll_or_range = coll_or_range
@@ -193,8 +266,9 @@ module Expression
 
   class Block < Expression
     attr_reader :body
-    def initialize(body)
+    def initialize(body, return_result = false)
       @body  = body
+      @return_result = return_result
     end
     def eval(env)
       scope = Environment::Environment.new(parent: env)
@@ -202,7 +276,11 @@ module Expression
       @body.each do |form|
         result = form.eval(scope)
       end
+      if @return_result
+        result
+      else
       scope
+      end
     end
   end
 end

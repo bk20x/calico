@@ -27,6 +27,9 @@ module Parser
 
       lhs = case token
             when 'for' then parse_for_in
+            when 'if'  then parse_if_else
+            when 'use' then parse_use
+            when 'do'  then self.advance; parse_block(:return_result => true) # since regular block expressions return their environment
             when '('  then expr = parse(-1); self.advance; expr
             when '['  then parse_lambda
             when '{'  then parse_block
@@ -61,6 +64,20 @@ module Parser
       lhs
     end
 
+    def parse_use
+      env = parse(0)
+      if peek == 'in'
+        advance
+        unless advance == '{'
+          raise "Syntax Error: Expected '{' for use body"
+        end
+        body_node = parse_block(:return_result => true)
+        Expression::UseInExpression.new(env, body_node)
+      else
+        Expression::UseExpression.new(env)
+      end
+    end
+
 
     def parse_seq
       elements = []
@@ -74,6 +91,29 @@ module Parser
       Expression::Sequence.new(elements)
     end
 
+    def parse_if_else
+      cond = parse
+
+      unless advance == '{'
+        raise "Syntax Error: Expected '{' after if condition"
+      end
+      body_node = parse_block(:return_result => true)
+
+      elt = nil
+      if peek == 'else'
+        advance
+        if peek == 'if'
+          advance
+          elt = parse_if_else
+        elsif peek == '{'
+          advance
+          elt = parse_block(:return_result => true)
+        else
+          raise "Syntax Error: Expected '{' or 'if' after else"
+        end
+      end
+      Expression::IfElse.new(cond, body_node, elt)
+    end
 
     def parse_for_in
       var_token = advance
@@ -92,8 +132,19 @@ module Parser
     def parse_lambda
       params = []
       while (nxt = peek) && nxt != ']'
-        param_token = advance
-        params << Expression::Symbol.new(param_token)
+        token = advance
+        if token == '*'
+          vararg_name_token = advance
+          if vararg_name_token.nil? || vararg_name_token == ']'
+            raise "Syntax Error: Expected parameter name after '*'"
+          end
+          params << Expression::Vararg.new(vararg_name_token)
+          if peek != ']'
+            raise "Syntax Error: Vararg '*#{vararg_name_token}' must be the last parameter"
+          end
+        else
+          params << Expression::Symbol.new(token)
+        end
       end
       unless advance == ']'
         raise "Syntax Error: Expected ']' to close lambda parameters"
@@ -112,6 +163,7 @@ module Parser
       Expression::Lambda.new(params, body_expressions, nil)
     end
 
+
     def parse_call(func)
       args = []
       if peek != ')'
@@ -125,7 +177,7 @@ module Parser
       Expression::Call.new(func, args)
     end
 
-    def parse_block
+    def parse_block(return_result = false)
       body_expressions = []
       while (nxt = peek) && nxt != '}'
         expr = parse(-1)
@@ -134,7 +186,7 @@ module Parser
       unless advance == '}'
         raise "Syntax Error: Missing closing '}' for block body"
       end
-      Expression::Block.new(body_expressions)
+      Expression::Block.new(body_expressions, return_result)
     end
 
     def precedence_of(token)
@@ -155,8 +207,8 @@ module Parser
         return @buf[start...@pos]
       when DIGITS
         @pos += 1 while @pos < @buf.length && (DIGITS === @buf[@pos] || @buf[@pos] == '.')
-      when LETTERS, UPPER, '_', '?'
-        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?')
+      when LETTERS, UPPER, '_', '?', '-'
+        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?' || @buf[@pos] == '-')
       when '(', ')', ',', '[', ']', '{', '}'
         @pos += 1
       when '@'
@@ -167,13 +219,13 @@ module Parser
           @pos += 1 while @pos < @buf.length &&
                           !(WHITESPACE.include? @buf[@pos]) &&
                           !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
-                          !%w|( ) , $ [ ] { }|.include?(@buf[@pos])
+                          !%w|( ) , [ ] { }|.include?(@buf[@pos])
         end
       else
         @pos += 1 while @pos < @buf.length &&
                         !(WHITESPACE.include? @buf[@pos]) &&
                         !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
-                        !%w|( ) , $ [ ] { }|.include?(@buf[@pos])
+                        !%w|( ) , [ ] { }|.include?(@buf[@pos])
       end
       @buf[start...@pos]
     end
@@ -219,17 +271,22 @@ def do_file(path, env)
 end
 
 require_relative 'environment'
+require 'socket'
 context = {
   'print' => -> (*xs) {puts xs.map {|x| x.to_s}.join},
   'image' => -> (obj) {obj.to_s},
-  'gets'  => -> ()  {gets}
+  'gets'  => -> ()  {gets},
+  'find-class' => ->(name){Object.const_get(name)},
 }
 env = Environment::Environment.new
 env.interned.merge!(context)
-do_file('test.calc', env)
 while true
   print "> "
   ln = gets.chomp
+  if ln.start_with? '#load'
+    do_file(ln.split(' ')[1], env)
+    next
+  end
   next if ln.strip.empty?
   begin
     p = Parser::Parser.new(ln)

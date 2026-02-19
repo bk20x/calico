@@ -7,13 +7,71 @@ bobby <- {
 }
 
 
-print(bobby.name + ' is ' + image(bobby.age) + ' years old')
-
-bobby.greet('boben')
-
-
-xs <- @[2,4,6,8]
+xs <- @[1,2,3,4,5]
 
 for x in xs {
-  print(x * x)
+    bobby.greet('Boben Number: ' + image(x))
 }
+
+
+Counter <- [] {
+   x <- 0
+   {
+      inc <- [] {x := x + 1}
+      dec <- [] {x := x - 1}
+      get <- [] {x}
+   }
+}
+
+counter <- Counter()
+
+for _ in @[0,1,2] {
+    print(counter.inc())
+}
+
+List <- [*init] {
+  {
+    items <- init
+    add <- [x]{
+      items.push(x)
+    }
+    at <- [idx] {
+      items.at(idx)
+    }
+    map <- [f] {
+      result <- @[]
+      for x in items {
+	    result.push(f(x))
+      }
+    }
+    filter <- [f] {
+      result <- @[]
+      for x in items {
+        if f(x) {
+          result.push(x)
+        }
+      }
+    }
+  }
+}
+
+
+ys <- List(2, 4, 6, 8)
+
+use ys in {
+  add(5)
+  add(10)
+  add(15)
+  items := map([x]{ x * x })
+}
+
+print(ys.items.inspect())
+
+Time <- find-class('Time')
+
+now <- use Time in { now().inspect().reverse() * 3 }
+
+print(now)
+
+
+
