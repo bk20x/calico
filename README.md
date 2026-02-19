@@ -3,11 +3,37 @@
 #### Very WIP, funnily enough I made this after telling myself I was going to make a bc clone in with operator precedence to learn the language
 
 ```
+
 Time <- find-class('Time')
+now  <- use Time in { now().inspect().reverse() * 3 }
 
-now <- use Time in { now().inspect().reverse() * 3 }
+bobby <- {
+    name  <- 'Bobby'
+    age   <- 92
+    greet <- [other] {
+        print('Hello ' + other + '!')
+    }
+}
 
-print(now)
+for x in 0..5 {
+  bobby.greet('Boben Number: ' + image(x))
+}
+
+
+Counter <- [] {
+   x <- 0
+   {
+      inc <- [] {x := x + 1}
+      dec <- [] {x := x - 1}
+      get <- [] {x}
+   }
+}
+
+counter <- Counter()
+
+for _ in @[0,1,2] {
+    print(counter.inc())
+}
 
 List <- [*init] {
   {
@@ -45,4 +71,23 @@ use ys in {
 }
 
 print(ys.items.inspect())
+
+ip <- do {
+  Http <- find-class('Net::HTTP')
+  Http.get('ident.me', '/')
+}
+
+print(ip)
+
+
+fun <- [] {
+  print(myVar)
+}
+
+fun.closure := {
+  myVar <- 'Hello World!'
+}
+
+fun()
+
 ```

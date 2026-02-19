@@ -1,7 +1,6 @@
 module Environment
   class Environment
-    attr_reader :parent, :interned
-
+    attr_accessor :parent, :interned
     def initialize(parent: nil)
       @parent   = parent
       @interned = {}

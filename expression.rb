@@ -11,6 +11,8 @@ module Expression
   OP_EQ      = '='
   OP_BIND    = '<-'
   OP_SET     = ':='
+  OP_RANGE   = '..'
+  OP_PIPE    = '->'
   COMPARATOR_PRECEDENCE = 1
   OPERATOR_PRECEDENCES = {
     OP_BIND    => 0,
@@ -20,10 +22,12 @@ module Expression
     OP_GTHANEQ => COMPARATOR_PRECEDENCE,
     OP_LTHAN   => COMPARATOR_PRECEDENCE,
     OP_LTHANEQ => COMPARATOR_PRECEDENCE,
-    OP_SUB     => 2,
-    OP_ADD     => 2,
-    OP_DIV     => 3,
-    OP_MUL     => 3
+    OP_PIPE    => 2,
+    OP_RANGE   => 2,
+    OP_SUB     => 3,
+    OP_ADD     => 3,
+    OP_DIV     => 4,
+    OP_MUL     => 4
   }
 
   class Expression
@@ -63,13 +67,27 @@ module Expression
         val          = @rexpr.eval(env)
         env.intern(binding_name, val)
       elsif @op == OP_SET
-        unless @lexpr.instance_of? Symbol
-          raise "Left hand side of set, `:=` must be a symbol"
+        if @lexpr.instance_of? Symbol
+          binding_name = @lexpr.name
+          val          = @rexpr.eval(env)
+          place = env.location_of(binding_name)
+          place.intern(binding_name, val)
+        elsif @lexpr.instance_of? DotAccess
+          root  = @lexpr.target.eval(env)
+          field = @lexpr.field
+          val   = @rexpr.eval(env)
+          if root.respond_to?("#{field}=")
+            root.public_send("#{field}=", val)
+          else
+            raise "Attempt to set read only value in #{@lexpr.target.name}.#{field} := #{val}"
+          end
         end
-        binding_name = @lexpr.name
-        val          = @rexpr.eval(env)
-        place = env.location_of(binding_name)
-        place.intern(binding_name, val)
+      elsif @op == OP_PIPE
+        if @rexpr.instance_of? Call
+          Call.new(@rexpr.func, @rexpr.args.prepend(@lexpr)).eval(env)
+        else
+          Call.new(@rexpr, [@lexpr]).eval(env)
+        end
       else
         left  = @lexpr.eval(env)
         right = @rexpr.eval(env)
@@ -83,12 +101,12 @@ module Expression
           when OP_LTHAN   then left < right
           when OP_LTHANEQ then left <= right
           when OP_EQ      then left == right
+          when OP_RANGE   then left .. right
           else raise "Invalid operator in binary expression: #{@op}"
         end
       end
     end
   end
-
   class Symbol < Expression
     attr_reader :name
     def initialize(name)
@@ -112,7 +130,7 @@ module Expression
 
 
   class Lambda < Expression
-    attr_reader :params, :body, :closure
+    attr_accessor :params, :body, :closure
 
     def initialize(params, body, env = nil)
       @params  = params
@@ -125,6 +143,7 @@ module Expression
   end
 
   class Call < Expression
+    attr_reader :func, :args
     def initialize(name, args)
       @func = name
       @args = args
@@ -164,6 +183,7 @@ module Expression
     end
   end
   class DotAccess < Expression
+    attr_reader :target, :field
     def initialize(target, field)
         @target = target
         @field  = field.name
@@ -235,17 +255,13 @@ module Expression
       coll_or_range = @coll_or_range.eval(env)
       result = nil
       scope = Environment::Environment.new(parent: env)
-      if coll_or_range.instance_of? Array
-        coll_or_range.each do |item|
-            scope.intern(@args[0].name, item)
-            @body.each do |expr|
-              result = expr.eval(scope)
-            end
+      coll_or_range.each do |item|
+        scope.intern(@args[0].name, item)
+        @body.each do |expr|
+          result = expr.eval(scope)
         end
-        result
-      else
-        raise "Not implemented: for in for type #{coll_or_range.class}"
       end
+      result
     end
   end
 

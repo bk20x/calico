@@ -6,11 +6,8 @@ bobby <- {
     }
 }
 
-
-xs <- @[1,2,3,4,5]
-
-for x in xs {
-    bobby.greet('Boben Number: ' + image(x))
+for x in 0..5 {
+  bobby.greet('Boben Number: ' + image(x))
 }
 
 
@@ -72,6 +69,27 @@ Time <- find-class('Time')
 now <- use Time in { now().inspect().reverse() * 3 }
 
 print(now)
+
+ip <- do {
+  Http <- find-class('Net::HTTP')
+  Http.get('ident.me', '/')
+}
+
+print(ip)
+
+
+fun <- [] {
+  print(myVar)
+}
+
+fun.closure := {
+  myVar <- 'Hello World!'
+}
+
+fun()
+
+
+
 
 
 

@@ -206,29 +206,54 @@ module Parser
         @pos += 1
         return @buf[start...@pos]
       when DIGITS
-        @pos += 1 while @pos < @buf.length && (DIGITS === @buf[@pos] || @buf[@pos] == '.')
+        while @pos < @buf.length && (DIGITS === @buf[@pos] || @buf[@pos] == '.')
+          break if @buf[@pos] == '.' && @buf[@pos + 1] == '.'
+          @pos += 1
+        end
+        return @buf[start...@pos]
+      when '.'
+        if @buf[@pos + 1] == '.' # for ranges
+          @pos += 2
+          return '..'
+        else
+          @pos += 1
+          return '.'
+        end
+      when '-'
+        if @buf[@pos + 1] == '>'
+          @pos += 2
+          return '->'
+        end
+        @pos += 1
+        return '-'
       when LETTERS, UPPER, '_', '?', '-'
         @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?' || @buf[@pos] == '-')
+        return @buf[start...@pos]
       when '(', ')', ',', '[', ']', '{', '}'
         @pos += 1
-      when '@'
+        return char
+      when '@' # seq literal
         if @buf[@pos + 1] == '['
           @pos += 2
-          return "@["
+          return '@['
         else
           @pos += 1 while @pos < @buf.length &&
                           !(WHITESPACE.include? @buf[@pos]) &&
                           !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
                           !%w|( ) , [ ] { }|.include?(@buf[@pos])
+          return @buf[start...@pos]
         end
       else
         @pos += 1 while @pos < @buf.length &&
                         !(WHITESPACE.include? @buf[@pos]) &&
                         !(LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos]) &&
-                        !%w|( ) , [ ] { }|.include?(@buf[@pos])
+                        !%w|( ) , [ ] { } .|.include?(@buf[@pos])
+        return @buf[start...@pos]
       end
-      @buf[start...@pos]
     end
+
+
+
 
 
     private
@@ -269,7 +294,7 @@ def do_file(path, env)
     puts "Error in #{path}: #{e.message}"
   end
 end
-
+require 'net/http'
 require_relative 'environment'
 require 'socket'
 context = {
@@ -280,6 +305,7 @@ context = {
 }
 env = Environment::Environment.new
 env.interned.merge!(context)
+
 while true
   print "> "
   ln = gets.chomp
