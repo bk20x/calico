@@ -5,6 +5,7 @@
 ```
 
 Time <- find-class('Time')
+
 now  <- use Time in { now().inspect().reverse() * 3 }
 
 bobby <- {
