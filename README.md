@@ -80,8 +80,7 @@ fun()
 
 map <- [xs f] {
   result <- @[]
-  for x in xs {result.push(x -> f)}
-  result
+  for x in xs {result.push(x -> f)} 
 }
 
 filter <- [xs f] {
@@ -90,8 +89,10 @@ filter <- [xs f] {
     if f(x) {
       result.push(x)
     }
+    else {
+      result
+    }
   }
-  result
 }
 
 methods <- Time.methods() -> map([method]{method.to_s()}) -> filter([name]{name.include?('class')})

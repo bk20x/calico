@@ -101,8 +101,10 @@ filter <- [xs f] {
     if f(x) {
       result.push(x)
     }
+    else {
+      result
+    }
   }
-  result
 }
 
 methods <- Time.methods() -> map([method]{method.to_s()}) -> filter([name]{name.include?('class')})
