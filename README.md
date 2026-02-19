@@ -19,7 +19,7 @@ Counter <- [] {
 
 counter <- Counter()
 
-for _ in @[0,1,2] {
+for _ in 0..5 {
     print(counter.inc())
 }
 
