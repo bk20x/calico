@@ -1,6 +1,6 @@
 # Calico
 ### A little scripting language with first class environments and the ability to call ruby methods directly
-#### Very WIP, funnily enough I made this after telling myself I was going to make a bc clone in with operator precedence to learn the language 
+#### Very WIP, funnily enough I made this after telling myself I was going to make a bc clone in with operator precedence to learn the language, will probably be ported to Nim or Ada later on.
 
 ```
 Time <- find-class('Time')
