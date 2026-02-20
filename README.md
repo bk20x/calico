@@ -35,7 +35,7 @@ List <- [*init] {
     map <- [f] {
       result <- @[]
       for x in items {
-	    result.push(f(x))
+        result.push(f(x))
       }
     }
     filter <- [f] {
@@ -44,9 +44,9 @@ List <- [*init] {
         if f(x) {
           result.push(x)
         }
-		else {
-  		  result
-		}
+        else {
+          result
+        }
       }
     }
   }

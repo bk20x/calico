@@ -1,16 +1,3 @@
-bobby <- {
-    name  <- 'Bobby'
-    age   <- 92
-    greet <- [other] {
-        print('Hello ' + other + '!')
-    }
-}
-
-for x in 0..5 {
-  bobby.greet('Boben Number: ' + image(x))
-}
-
-
 Counter <- [] {
    x <- 0
    {
@@ -22,14 +9,14 @@ Counter <- [] {
 
 counter <- Counter()
 
-for _ in @[0,1,2] {
+for _ in 0..3 {
     print(counter.inc())
 }
 
 List <- [*init] {
   {
     items <- init
-    add <- [x]{
+    add <- [x] {
       items.push(x)
     }
     at <- [idx] {
@@ -53,6 +40,7 @@ List <- [*init] {
 }
 
 
+
 ys <- List(2, 4, 6, 8)
 
 use ys in {
@@ -70,13 +58,13 @@ now <- use Time in { now().inspect().reverse() * 3 }
 
 print(now)
 
+
 ip <- do {
   Http <- find-class('Net::HTTP')
   Http.get('ident.me', '/')
 }
 
 print(ip)
-
 
 fun <- [] {
   print(myVar)
@@ -92,7 +80,6 @@ fun()
 map <- [xs f] {
   result <- @[]
   for x in xs {result.push(x -> f)}
-  result
 }
 
 filter <- [xs f] {
@@ -109,9 +96,9 @@ filter <- [xs f] {
 
 methods <- Time.methods() -> map([method]{method.to_s()}) -> filter([name]{name.include?('class')})
 
-
-
-
+for x in (0..20).step(1.5) {
+  print(x)
+}
 
 
 

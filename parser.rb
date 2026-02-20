@@ -26,20 +26,21 @@ module Parser
       return nil if token.nil?
 
       lhs = case token
-            when 'for' then parse_for_in
-            when 'if'  then parse_if_else
-            when 'use' then parse_use
-            when 'do'  then self.advance; parse_block(:return_result => true) # since regular block expressions return their environment
-            when '('  then expr = parse(-1); self.advance; expr
-            when '['  then parse_lambda
-            when '{'  then parse_block
-            when '@[' then parse_seq
+            when 'spawn' then parse_spawn
+            when 'for'   then parse_for_in
+            when 'while' then parse_while
+            when 'if'    then parse_if_else
+            when 'use'   then parse_use
+            when 'do'    then self.advance; parse_block(true)
+            when '('     then expr = parse(-1); self.advance; expr
+            when '['     then parse_lambda
+            when '{'     then parse_block
+            when '@['    then parse_seq
             when -> (tok) { tok[0] == "'" } then Expression::String.new(token[1..-2])
             when -> (t) { is_number? t }    then Expression::Number.new(numberify token)
             when LETTERS, UPPER             then Expression::Symbol.new(token)
             else raise "Syntax Error: Unexpected token '#{token}'"
             end
-
       while (nxt = peek)
         if nxt == '.'
           self.advance
@@ -62,6 +63,11 @@ module Parser
         break
       end
       lhs
+    end
+
+    def parse_spawn
+      call = parse
+      Expression::SpawnExpression.new(call)
     end
 
     def parse_use
@@ -97,7 +103,7 @@ module Parser
       unless advance == '{'
         raise "Syntax Error: Expected '{' after if condition"
       end
-      body_node = parse_block(:return_result => true)
+      body_node = parse_block(true)
 
       elt = nil
       if peek == 'else'
@@ -107,7 +113,7 @@ module Parser
           elt = parse_if_else
         elsif peek == '{'
           advance
-          elt = parse_block(:return_result => true)
+          elt = parse_block(true)
         else
           raise "Syntax Error: Expected '{' or 'if' after else"
         end
@@ -115,6 +121,14 @@ module Parser
       Expression::IfElse.new(cond, body_node, elt)
     end
 
+    def parse_while
+      cond = parse
+      unless advance == '{'
+        raise "Syntax Error: Expected '{' after if condition in while loop"
+      end
+      body = parse_block(true)
+      Expression::While.new(cond, body)
+    end
     def parse_for_in
       var_token = advance
       iterator_var = Expression::Symbol.new(var_token)
@@ -168,7 +182,13 @@ module Parser
       args = []
       if peek != ')'
         loop do
-          args << parse(0)
+          if peek == '*'
+            advance
+            xs = parse
+            args << Expression::Splat.new(xs)
+          else
+            args << parse(0)
+          end
           break unless peek == ','
           self.advance
         end
@@ -226,8 +246,8 @@ module Parser
         end
         @pos += 1
         return '-'
-      when LETTERS, UPPER, '_', '?', '-'
-        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?' || @buf[@pos] == '-')
+      when LETTERS, UPPER, '_', '?', '-', '!'
+        @pos += 1 while @pos < @buf.length && (LETTERS === @buf[@pos] || UPPER === @buf[@pos] || DIGITS === @buf[@pos] || @buf[@pos] == '_' || @buf[@pos] == '?' || @buf[@pos] == '-' || @buf[@pos] == '!')
         return @buf[start...@pos]
       when '(', ')', ',', '[', ']', '{', '}'
         @pos += 1

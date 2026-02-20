@@ -114,7 +114,14 @@ module Expression
     end
 
     def eval(env)
-      env.lookup(@name)
+      case @name
+      when 'true'
+        return true
+      when 'false'
+        return false
+      else
+        env.lookup(@name)
+      end
     end
   end
 
@@ -142,6 +149,18 @@ module Expression
     end
   end
 
+  class Splat < Expression
+    def initialize(items)
+      @items = items
+    end
+    def eval(env)
+      self
+    end
+
+    def items
+      @items
+    end
+  end
   class Call < Expression
     attr_reader :func, :args
     def initialize(name, args)
@@ -155,6 +174,17 @@ module Expression
         instance_env = Environment::Environment.new(parent: func.closure || env)
         evaled_args = @args.map { |a| a.eval(env) }
         func.params.each_with_index do |param, i|
+          if evaled_args[i].instance_of? Splat
+            xs = evaled_args[i].items.eval(env)
+            if xs.length <= func.params.length
+              idx = i
+              xs.each do |x|
+                instance_env.intern(func.params[idx].name, x)
+                idx += 1
+              end
+              break
+            end
+          end
           if param.instance_of? Vararg
             rest = evaled_args[i..-1] || []
             instance_env.intern(param.name, rest)
@@ -172,6 +202,16 @@ module Expression
     end
   end
 
+  class SpawnExpression < Expression
+    def initialize(call)
+      @call = call
+    end
+    def eval(env)
+      Thread.new do
+        @call.eval(env)
+      end
+    end
+  end
 
   class Vararg < Expression
     attr_accessor :name
@@ -265,6 +305,19 @@ module Expression
     end
   end
 
+  class While
+    def initialize(cond, body)
+      @cond = cond
+      @body = body
+    end
+    def eval(env)
+      result = nil
+      while @cond.eval(env) do
+        result = @body.eval(env)
+      end
+      result
+    end
+  end
   class Sequence < Expression
     attr_reader :items
     def initialize(items = nil)

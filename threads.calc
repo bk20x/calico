@@ -1,0 +1,19 @@
+Thread <- find-class('Thread')
+
+use Thread in {
+  spawn [] { 
+    while true {
+      print('Yoben!')
+      pass()
+    }
+  }()
+  spawn [] {
+    while true {
+      print('Boben!')
+      pass()
+    }
+  }()
+  join()
+}
+
+
